@@ -711,6 +711,7 @@ VIR_ENUM_IMPL(virQEMUCaps,
 
               /* 460 */
               "sev-snp-guest", /* QEMU_CAPS_SEV_SNP_GUEST */
+              "netdev.user", /* QEMU_CAPS_NETDEV_USER */
     );
 
 
@@ -1575,6 +1576,7 @@ static struct virQEMUCapsStringFlags virQEMUCapsQMPSchemaQueries[] = {
     { "object-add/arg-type/+iothread/thread-pool-max", QEMU_CAPS_IOTHREAD_THREAD_POOL_MAX },
     { "query-migrate/ret-type/blocked-reasons", QEMU_CAPS_MIGRATION_BLOCKED_REASONS },
     { "screendump/arg-type/format/^png", QEMU_CAPS_SCREENSHOT_FORMAT_PNG },
+    { "netdev_add/arg-type/+user", QEMU_CAPS_NETDEV_USER },
 };
 
 typedef struct _virQEMUCapsObjectTypeProps virQEMUCapsObjectTypeProps;
@@ -5404,6 +5406,11 @@ virQEMUCapsInitQMPVersionCaps(virQEMUCaps *qemuCaps)
      */
     if (qemuCaps->version < 5002000)
         virQEMUCapsSet(qemuCaps, QEMU_CAPS_ENABLE_FIPS);
+
+    /* We are not able to detect this for old QEMU. Assume the capability is
+     * there. */
+    if (qemuCaps->version < 5000000)
+        virQEMUCapsSet(qemuCaps, QEMU_CAPS_NETDEV_USER);
 }
 
 
@@ -6535,6 +6542,20 @@ virQEMUCapsFillDomainLaunchSecurity(virQEMUCaps *qemuCaps,
 }
 
 
+void
+virQEMUCapsFillDomainDeviceNetCaps(virQEMUCaps *qemuCaps,
+                                   virDomainCapsDeviceNet *net)
+{
+    net->supported = VIR_TRISTATE_BOOL_YES;
+    net->backendType.report = true;
+
+    if (virQEMUCapsGet(qemuCaps, QEMU_CAPS_NETDEV_USER))
+        VIR_DOMAIN_CAPS_ENUM_SET(net->backendType, VIR_DOMAIN_NET_BACKEND_DEFAULT);
+    if (virQEMUCapsGet(qemuCaps, QEMU_CAPS_NETDEV_STREAM))
+        VIR_DOMAIN_CAPS_ENUM_SET(net->backendType, VIR_DOMAIN_NET_BACKEND_PASST);
+}
+
+
 /**
  * virQEMUCapsSupportsGICVersion:
  * @qemuCaps: QEMU capabilities
@@ -6700,6 +6721,7 @@ virQEMUCapsFillDomainCaps(virQEMUCaps *qemuCaps,
     virDomainCapsMemoryBacking *memoryBacking = &domCaps->memoryBacking;
     virDomainCapsDeviceCrypto *crypto = &domCaps->crypto;
     virDomainCapsLaunchSecurity *launchSecurity = &domCaps->launchSecurity;
+    virDomainCapsDeviceNet *net = &domCaps->net;
 
     virQEMUCapsFillDomainFeaturesFromQEMUCaps(qemuCaps, domCaps);
 
@@ -6740,6 +6762,7 @@ virQEMUCapsFillDomainCaps(virQEMUCaps *qemuCaps,
     virQEMUCapsFillDomainFeatureHypervCaps(qemuCaps, domCaps);
     virQEMUCapsFillDomainDeviceCryptoCaps(qemuCaps, crypto);
     virQEMUCapsFillDomainLaunchSecurity(qemuCaps, launchSecurity);
+    virQEMUCapsFillDomainDeviceNetCaps(qemuCaps, net);
 
     return 0;
 }

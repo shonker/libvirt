@@ -8,12 +8,22 @@ the changes introduced by each of them.
 For a more fine-grained view, use the `git log`_.
 
 
-v10.5.0 (unreleased)
+v10.6.0 (unreleased)
 ====================
 
 * **Security**
 
 * **Removed features**
+
+* **New features**
+
+* **Improvements**
+
+* **Bug fixes**
+
+
+v10.5.0 (2024-07-01)
+====================
 
 * **New features**
 

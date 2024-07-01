@@ -1705,12 +1705,18 @@ qemuValidateDomainDeviceDefNetwork(const virDomainNetDef *net,
     size_t i;
 
     if (net->type == VIR_DOMAIN_NET_TYPE_USER) {
-        if (net->backend.type == VIR_DOMAIN_NET_BACKEND_PASST &&
-            !virQEMUCapsGet(qemuCaps, QEMU_CAPS_NETDEV_STREAM)) {
-            virReportError(VIR_ERR_CONFIG_UNSUPPORTED, "%s",
-                           _("the passt network backend is not supported with this QEMU binary"));
+        virDomainCapsDeviceNet netCaps = { };
+
+        virQEMUCapsFillDomainDeviceNetCaps(qemuCaps, &netCaps);
+
+        if (!VIR_DOMAIN_CAPS_ENUM_IS_SET(netCaps.backendType,
+                                         net->backend.type)) {
+            virReportError(VIR_ERR_CONFIG_UNSUPPORTED,
+                           _("the '%1$s' network backend is not supported with this QEMU binary"),
+                           virDomainNetBackendTypeToString(net->backend.type));
             return -1;
         }
+
         if (net->guestIP.nroutes) {
             virReportError(VIR_ERR_CONFIG_UNSUPPORTED, "%s",
                            _("Invalid attempt to set network interface guest-side IP route, not supported by QEMU"));
